@@ -1,5 +1,5 @@
 # pgrock-cli 
-pgrock cli is the commandline client for the pgrock server written in go lang.
+pgrock cli is the command line client for the pgrock server written in go lang.
 
 ### Install
 ```
