@@ -1,4 +1,4 @@
-module github.com/Prajithp/pgrock
+module github.com/Prajithp/pgrock-cli
 
 go 1.16
 

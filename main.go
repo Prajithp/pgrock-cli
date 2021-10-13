@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Prajithp/pgrock/client"
+	"github.com/Prajithp/pgrock-cli/client"
 )
 
 func main() {

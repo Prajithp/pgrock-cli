@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Prajithp/pgrock/proxy"
+	"github.com/Prajithp/pgrock-cli/proxy"
 	"github.com/parinpan/protoevent"
 )
 
