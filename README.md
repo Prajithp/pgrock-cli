@@ -3,7 +3,7 @@ pgrock cli is the command line client for the pgrock server written in go lang.
 
 ### Install
 ```
-go get -v github.com/Prajithp/pgrep-cli
+go get -v github.com/Prajithp/pgrock-cli
 ```
 
 ### Usage
