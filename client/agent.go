@@ -12,6 +12,7 @@ type Agent struct {
 	ServerAddr string
 	ServerPort int
 	LocalPort  int
+	CloseEvent chan int
 }
 
 func NewAgent(ServerAddr string, ServerPort int, LocalPort int) *Agent {
@@ -19,13 +20,31 @@ func NewAgent(ServerAddr string, ServerPort int, LocalPort int) *Agent {
 		ServerAddr: ServerAddr,
 		ServerPort: ServerPort,
 		LocalPort:  LocalPort,
+		CloseEvent: make(chan int),
 	}
 }
 
-func (a *Agent) Run() {
+func (a *Agent) Run(t *Term) {
 	serverAddress := fmt.Sprintf("%s:%d", a.ServerAddr, a.ServerPort)
 	agent, event := protoevent.CreateAgent("tcp", serverAddress)
 	agent.SetDefaultReadSize(4096)
+
+	event.OnConnectionAccepted(func(conn net.Conn) {
+		go func() {
+			for {
+				select {
+				case <-a.CloseEvent:
+					conn.Close()
+					return
+				}
+			}
+		}()
+		return
+	})
+
+	event.OnConnectionError(func(err error) {
+		t.Screen.Fini()
+	})
 
 	event.OnMessageReceived(func(conn net.Conn, message []byte, rawMessage []byte) {
 		input, err := proxy.Parse(message)
@@ -35,8 +54,8 @@ func (a *Agent) Run() {
 		}
 		switch input.Type {
 		case "init":
-			fmt.Println("Connected to Server")
-			fmt.Printf("Address %s", input.Bytes)
+			banner := fmt.Sprintf("Tunnel: Online\nAddress: %s", input.Bytes)
+			t.SetStatus(banner)
 		case "reqProxy":
 			proxy := proxy.New(a.ServerAddr, a.ServerPort, a.LocalPort, input.Bytes)
 			proxy.Run()
@@ -50,7 +69,8 @@ func (a *Agent) Run() {
 		return err
 	})
 
-	if nil != err {
+	if err != nil {
+		t.Screen.Fini()
 		panic(err)
 	}
 }
