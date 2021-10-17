@@ -1,10 +1,14 @@
 package proxy
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
+	"net/http"
+	"strings"
 )
 
 type ConnectionMeta struct {
@@ -23,8 +27,10 @@ type ProxyResponse struct {
 }
 
 type Forwader struct {
-	Conn net.Conn
-	Id   string
+	Conn           net.Conn
+	Id             string
+	RequestChannel chan []string
+	Request        *http.Request
 }
 
 func (f *Forwader) Write(m []byte) (int, error) {
@@ -46,6 +52,20 @@ func (f *Forwader) Write(m []byte) (int, error) {
 	}
 	if n != len(data) {
 		return n, io.ErrShortWrite
+	}
+
+	if f.Request != nil {
+		respBuf := bufio.NewReader(strings.NewReader(string(m)))
+		res, err := http.ReadResponse(respBuf, f.Request)
+		if err == nil {
+			defer res.Body.Close()
+
+			statusCode := fmt.Sprintf("%v", res.StatusCode)
+			method := f.Request.Method
+			url := f.Request.RequestURI
+			row := []string{method, statusCode, url}
+			f.RequestChannel <- row
+		}
 	}
 
 	return len(m), err

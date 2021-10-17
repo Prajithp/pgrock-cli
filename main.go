@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Prajithp/pgrock-cli/client"
 )
@@ -11,12 +10,17 @@ func main() {
 	opts := client.ParseArgs()
 
 	agent := client.NewAgent(opts.Remote, opts.Port, opts.LocalPort)
+	term := client.NewTermV2(agent)
+	agent.Term = term
 
-	term, err := client.NewScreen()
-	if err != nil {
-		fmt.Println("Could not initialize terminal")
-		os.Exit(1)
-	}
-	term.Run(agent)
-	agent.Run(term)
+	go func() {
+		defer func() {
+			term.App.Stop()
+			fmt.Println("Closed the connection unexpectedly")
+		}()
+		err := agent.Run()
+		fmt.Println(err)
+	}()
+
+	term.Draw()
 }

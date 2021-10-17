@@ -69,7 +69,7 @@ func (t *Term) Run(a *Agent) {
 			select {
 			case <-quit:
 				t.Screen.Fini()
-				a.CloseEvent <- 1
+				a.Quit <- 1
 				break
 			case res := <-t.Status:
 				t.connStatusUpdate(res)

@@ -1,29 +1,35 @@
 package proxy
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
+	"strings"
 
 	"github.com/parinpan/protoevent"
 )
 
 type Proxy struct {
-	ServerAddr string
-	ServerPort int
-	LocalPort  int
-	Identifier string
-	Forwader   net.Conn
+	RequestChannel chan []string
+	ServerAddr     string
+	ServerPort     int
+	LocalPort      int
+	Identifier     string
+	Forwader       net.Conn
+	AppClient      *Forwader
 }
 
-func New(ServerAddr string, ServerPort int, LocalPort int, Identifier string) *Proxy {
+func New(ReqCh chan []string, ServerAddr string, ServerPort int, LocalPort int, Identifier string) *Proxy {
 
 	client := &Proxy{
-		ServerAddr: ServerAddr,
-		ServerPort: ServerPort,
-		LocalPort:  LocalPort,
-		Identifier: Identifier,
+		RequestChannel: ReqCh,
+		ServerAddr:     ServerAddr,
+		ServerPort:     ServerPort,
+		LocalPort:      LocalPort,
+		Identifier:     Identifier,
 	}
 
 	return client
@@ -45,11 +51,11 @@ func (p *Proxy) Run() {
 			return
 		}
 		p.Forwader = client
+		p.AppClient = &Forwader{Id: p.Identifier, Conn: conn, RequestChannel: p.RequestChannel}
 
 		go func() {
 			defer client.Close()
-			f := &Forwader{Id: p.Identifier, Conn: conn}
-			_, err := io.Copy(f, p.Forwader)
+			_, err := io.Copy(p.AppClient, p.Forwader)
 
 			if err != nil {
 				fmt.Println(err)
@@ -58,6 +64,10 @@ func (p *Proxy) Run() {
 	})
 
 	event.OnMessageReceived(func(conn net.Conn, message []byte, rawMessage []byte) {
+		buf := bufio.NewReader(strings.NewReader(string(rawMessage)))
+		req, _ := http.ReadRequest(buf)
+		p.AppClient.Request = req
+
 		_, err := p.Forwader.Write(message)
 		if err != nil {
 			fmt.Println("Failed to write message to local server")
